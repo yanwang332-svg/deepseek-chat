@@ -5,6 +5,7 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 
 import json
 import ssl
+import time
 import streamlit as st
 import http.client
 import certifi
@@ -198,12 +199,47 @@ with st.sidebar:
     st.markdown("---")
     st.caption("DeepSeek API 兼容 OpenAI 接口")
 
-# ====================== 初始化聊天记录 ===========================
+# ====================== 初始化 ===========================
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "unlocked" not in st.session_state:
+    st.session_state.unlocked = False
+if "last_request_time" not in st.session_state:
+    st.session_state.last_request_time = 0
+if "request_count" not in st.session_state:
+    st.session_state.request_count = 0
+
+# ====================== 门禁密码 ===========================
+try:
+    ACCESS_PASSWORD = st.secrets["APP_PASSWORD"]
+except (KeyError, FileNotFoundError):
+    ACCESS_PASSWORD = ""
 
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
+
+if not st.session_state.unlocked:
+    st.markdown("<div style='text-align: center; color: #888;'>请输入访问密码</div>", unsafe_allow_html=True)
+    pwd = st.text_input("密码", type="password", key="pwd_input")
+
+    # 验证密码：优先用 Secrets 里配的 APP_PASSWORD，没配则用默认 888888
+    correct_pwd = ACCESS_PASSWORD if ACCESS_PASSWORD else "888888"
+    if pwd == correct_pwd:
+        st.session_state.unlocked = True
+        st.success("✅ 验证通过")
+        st.rerun()
+    elif pwd and pwd != correct_pwd:
+        st.error("密码错误，请重试")
+    st.stop()
+
+# ====================== 已解锁：正常聊天 ======================
 st.markdown("<div style='text-align: center; color: #888;'>与 DeepSeek 大模型对话，支持上下文记忆</div>", unsafe_allow_html=True)
+
+# 显示使用统计
+col1, col2 = st.columns(2)
+with col1:
+    st.caption(f"📊 本次会话请求：{st.session_state.request_count}")
+with col2:
+    st.caption("🛡️ 间隔限制：3秒")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -220,6 +256,16 @@ if user_input := st.chat_input("请输入你的问题"):
     except UnicodeEncodeError:
         st.error("API Key 只能包含英文字母和数字，请检查是否误输入了中文")
         st.stop()
+
+    # 频率限制：至少间隔 3 秒
+    now = time.time()
+    elapsed = now - st.session_state.last_request_time
+    if elapsed < 3:
+        st.warning(f"请稍等 {3 - elapsed:.0f} 秒后再发送")
+        st.stop()
+
+    st.session_state.request_count += 1
+    st.session_state.last_request_time = now
 
     st.session_state.messages.append({"role": "user", "content": user_input})
     save_log("user", user_input)
