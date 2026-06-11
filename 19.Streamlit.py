@@ -153,19 +153,24 @@ with st.sidebar:
             except UnicodeEncodeError:
                 st.warning("Key 含有非英文字符，未保存")
     else:
-        st.warning("⚠️ 未检测到已保存的 Key")
-        st.caption("请将 Key 写入以下文件（服务端读取，不经过前端）：")
-        st.code(f"echo 'sk-你的key' > {SECRET_FILE}", language="bash")
-        st.caption("或设置环境变量：")
-        st.code("export DEEPSEEK_API_KEY='sk-你的key'", language="bash")
-        st.caption("或手动输入（不推荐，会经 WebSocket 传输）：")
-        api_key = st.text_input("DeepSeek API Key", type="password")
-        if api_key and len(api_key) > 10:
-            try:
-                api_key.encode("ascii")
-                save_api_key(api_key)
-            except UnicodeEncodeError:
-                pass
+        # Cloud 用户引导
+        try:
+            _ = st.secrets  # 探测是否在 Cloud 上
+            st.info("☁️ Cloud 部署：请在 App Settings → Secrets 中添加 DEEPSEEK_API_KEY，然后刷新页面")
+            api_key = ""
+        except FileNotFoundError:
+            # 本地用户引导
+            st.warning("⚠️ 未检测到已保存的 Key")
+            st.caption("运行以下命令配置（不经过前端）：")
+            st.code(f"echo 'sk-你的key' |  python3 -c \"import sys; from cryptography.fernet import Fernet; import os; d=os.path.expanduser('~/.deepseek_chat'); os.makedirs(d,exist_ok=True); k=Fernet.generate_key(); open(d+'/.key','wb').write(k); open(d+'/api_key.enc','wb').write(Fernet(k).encrypt(sys.stdin.read().strip().encode()))\"", language="bash")
+            st.caption("或手动输入：")
+            api_key = st.text_input("DeepSeek API Key", type="password")
+            if api_key and len(api_key) > 10:
+                try:
+                    api_key.encode("ascii")
+                    save_api_key(api_key)
+                except UnicodeEncodeError:
+                    pass
 
     base_url = st.text_input("API Base URL", value="https://api.deepseek.com", help="默认使用官方地址")
     model_name = st.selectbox("模型", ["deepseek-chat", "deepseek-reasoner","deepseek-v4-pro"], index=0)
