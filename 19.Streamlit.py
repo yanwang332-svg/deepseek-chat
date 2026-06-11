@@ -131,7 +131,21 @@ def get_api_key():
 server_api_key = get_api_key()
 is_saved = server_api_key is not None
 
-# Cloud 检测 & 密码（必须在侧边栏之前）
+# ===== 初始化 session（必须在 sidebar 之前）=====
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "unlocked" not in st.session_state:
+    st.session_state.unlocked = False
+if "is_admin" not in st.session_state:
+    st.session_state.is_admin = False
+if "last_request_time" not in st.session_state:
+    st.session_state.last_request_time = 0
+if "request_count" not in st.session_state:
+    st.session_state.request_count = 0
+if "cloud_logs" not in st.session_state:
+    st.session_state.cloud_logs = []
+
+# Cloud 检测 & 密码
 IS_PROD = False
 ACCESS_PASSWORD = ""
 ADMIN_PASSWORD = ""
@@ -218,20 +232,6 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("DeepSeek API 兼容 OpenAI 接口")
-
-# ====================== 初始化 ===========================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "unlocked" not in st.session_state:
-    st.session_state.unlocked = False
-if "is_admin" not in st.session_state:
-    st.session_state.is_admin = False
-if "last_request_time" not in st.session_state:
-    st.session_state.last_request_time = 0
-if "request_count" not in st.session_state:
-    st.session_state.request_count = 0
-if "cloud_logs" not in st.session_state:
-    st.session_state.cloud_logs = []
 
 # ====================== 门禁密码 ===========================
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
