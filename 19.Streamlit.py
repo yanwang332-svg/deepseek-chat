@@ -129,7 +129,20 @@ def get_api_key():
     return None
 
 server_api_key = get_api_key()
-is_saved = server_api_key is not None  # 是否有现成的 Key（不论来源）
+is_saved = server_api_key is not None
+
+# Cloud 检测 & 门禁密码（必须在侧边栏之前）
+IS_PROD = False
+ACCESS_PASSWORD = ""
+try:
+    _ = st.secrets["DEEPSEEK_API_KEY"]
+    IS_PROD = True
+except Exception:
+    pass
+try:
+    ACCESS_PASSWORD = st.secrets.get("APP_PASSWORD", "")
+except Exception:
+    pass
 
 # ====================== 侧边栏配置 ===========================
 with st.sidebar:
@@ -209,18 +222,6 @@ if "request_count" not in st.session_state:
     st.session_state.request_count = 0
 
 # ====================== 门禁密码 ===========================
-# Cloud 检测：DEEPSEEK_API_KEY 在 Secrets 中说明已部署
-try:
-    _ = st.secrets["DEEPSEEK_API_KEY"]
-    IS_PROD = True  # 生产环境，隐藏敏感信息
-except (KeyError, FileNotFoundError):
-    IS_PROD = False  # 本地开发
-
-try:
-    ACCESS_PASSWORD = st.secrets["APP_PASSWORD"]
-except (KeyError, FileNotFoundError):
-    ACCESS_PASSWORD = ""
-
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
 
 if not st.session_state.unlocked:
