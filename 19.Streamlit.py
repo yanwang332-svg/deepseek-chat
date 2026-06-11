@@ -184,17 +184,17 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 历史日志
-    with st.expander("📋 对话日志", expanded=False):
-        logs = load_logs(50)
-        if logs:
-            for log in reversed(logs):
-                icon = "🧑" if log["role"] == "user" else "🤖"
-                # 截断过长内容
-                content = log["content"][:80] + ("..." if len(log["content"]) > 80 else "")
-                st.caption(f"{icon} {log['time']}  {content}")
-        else:
-            st.caption("暂无日志")
+    # 历史日志（仅本地显示，Cloud 上隐藏）
+    if not IS_CLOUD:
+        with st.expander("📋 对话日志", expanded=False):
+            logs = load_logs(50)
+            if logs:
+                for log in reversed(logs):
+                    icon = "🧑" if log["role"] == "user" else "🤖"
+                    content = log["content"][:80] + ("..." if len(log["content"]) > 80 else "")
+                    st.caption(f"{icon} {log['time']}  {content}")
+            else:
+                st.caption("暂无日志")
 
     st.markdown("---")
     st.caption("DeepSeek API 兼容 OpenAI 接口")
@@ -212,8 +212,10 @@ if "request_count" not in st.session_state:
 # ====================== 门禁密码 ===========================
 try:
     ACCESS_PASSWORD = st.secrets["APP_PASSWORD"]
+    IS_CLOUD = True
 except (KeyError, FileNotFoundError):
     ACCESS_PASSWORD = ""
+    IS_CLOUD = False
 
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
 
