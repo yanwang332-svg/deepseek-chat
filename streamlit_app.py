@@ -131,16 +131,21 @@ def get_api_key():
 server_api_key = get_api_key()
 is_saved = server_api_key is not None
 
-# Cloud 检测 & 门禁密码（必须在侧边栏之前）
+# Cloud 检测 & 密码（必须在侧边栏之前）
 IS_PROD = False
 ACCESS_PASSWORD = ""
+ADMIN_PASSWORD = ""
 try:
     _ = st.secrets["DEEPSEEK_API_KEY"]
     IS_PROD = True
 except Exception:
     pass
 try:
-    ACCESS_PASSWORD = st.secrets.get("APP_PASSWORD", "")
+    ACCESS_PASSWORD = st.secrets["APP_PASSWORD"]
+except Exception:
+    pass
+try:
+    ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
 except Exception:
     pass
 
@@ -196,12 +201,15 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 历史日志（仅本地开发显示，部署后隐藏）
-    if not IS_PROD:
+    # 对话日志（本地/管理员可见）
+    if not IS_PROD or st.session_state.is_admin:
         with st.expander("📋 对话日志", expanded=False):
-            logs = load_logs(50)
+            if IS_PROD:
+                logs = st.session_state.cloud_logs
+            else:
+                logs = load_logs(50)
             if logs:
-                for log in reversed(logs):
+                for log in reversed(logs[-50:]):
                     icon = "🧑" if log["role"] == "user" else "🤖"
                     content = log["content"][:80] + ("..." if len(log["content"]) > 80 else "")
                     st.caption(f"{icon} {log['time']}  {content}")
@@ -216,10 +224,14 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "unlocked" not in st.session_state:
     st.session_state.unlocked = False
+if "is_admin" not in st.session_state:
+    st.session_state.is_admin = False
 if "last_request_time" not in st.session_state:
     st.session_state.last_request_time = 0
 if "request_count" not in st.session_state:
     st.session_state.request_count = 0
+if "cloud_logs" not in st.session_state:
+    st.session_state.cloud_logs = []
 
 # ====================== 门禁密码 ===========================
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
@@ -228,13 +240,19 @@ if not st.session_state.unlocked:
     st.markdown("<div style='text-align: center; color: #888;'>请输入访问密码</div>", unsafe_allow_html=True)
     pwd = st.text_input("密码", type="password", key="pwd_input")
 
-    # 验证密码：优先用 Secrets 里配的 APP_PASSWORD，没配则用默认 888888
-    correct_pwd = ACCESS_PASSWORD if ACCESS_PASSWORD else "888888"
-    if pwd == correct_pwd:
+    user_pwd = ACCESS_PASSWORD if ACCESS_PASSWORD else "888888"
+    admin_pwd = ADMIN_PASSWORD if ADMIN_PASSWORD else "admin888"
+
+    if pwd == admin_pwd:
+        st.session_state.unlocked = True
+        st.session_state.is_admin = True
+        st.success("🔑 管理员模式")
+        st.rerun()
+    elif pwd == user_pwd:
         st.session_state.unlocked = True
         st.success("✅ 验证通过")
         st.rerun()
-    elif pwd and pwd != correct_pwd:
+    elif pwd:
         st.error("密码错误，请重试")
     st.stop()
 
@@ -276,6 +294,7 @@ if user_input := st.chat_input("请输入你的问题"):
 
     st.session_state.messages.append({"role": "user", "content": user_input})
     save_log("user", user_input)
+    st.session_state.cloud_logs.append({"time": datetime.now().strftime("%H:%M:%S"), "role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
@@ -313,6 +332,7 @@ if user_input := st.chat_input("请输入你的问题"):
         assistant_response = data["choices"][0]["message"]["content"]
 
         save_log("assistant", assistant_response)
+        st.session_state.cloud_logs.append({"time": datetime.now().strftime("%H:%M:%S"), "role": "assistant", "content": assistant_response})
         with st.chat_message("assistant"):
             st.markdown(assistant_response)
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
