@@ -154,12 +154,11 @@ with st.sidebar:
             except UnicodeEncodeError:
                 st.warning("Key 含有非英文字符，未保存")
     else:
-        # Cloud 用户引导
-        try:
-            _ = st.secrets  # 探测是否在 Cloud 上
-            st.info("☁️ Cloud 部署：请在 App Settings → Secrets 中添加 DEEPSEEK_API_KEY，然后刷新页面")
+        # 生产环境自动引导，本地给手动选项
+        if IS_PROD:
+            st.info("☁️ 请在 App Settings → Secrets 中配置 Key，然后刷新页面")
             api_key = ""
-        except FileNotFoundError:
+        else:
             # 本地用户引导
             st.warning("⚠️ 未检测到已保存的 Key")
             st.caption("运行以下命令配置（不经过前端）：")
@@ -184,8 +183,8 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 历史日志（仅本地显示，Cloud 上隐藏）
-    if not IS_CLOUD:
+    # 历史日志（仅本地开发显示，部署后隐藏）
+    if not IS_PROD:
         with st.expander("📋 对话日志", expanded=False):
             logs = load_logs(50)
             if logs:
@@ -210,12 +209,17 @@ if "request_count" not in st.session_state:
     st.session_state.request_count = 0
 
 # ====================== 门禁密码 ===========================
+# Cloud 检测：DEEPSEEK_API_KEY 在 Secrets 中说明已部署
+try:
+    _ = st.secrets["DEEPSEEK_API_KEY"]
+    IS_PROD = True  # 生产环境，隐藏敏感信息
+except (KeyError, FileNotFoundError):
+    IS_PROD = False  # 本地开发
+
 try:
     ACCESS_PASSWORD = st.secrets["APP_PASSWORD"]
-    IS_CLOUD = True
 except (KeyError, FileNotFoundError):
     ACCESS_PASSWORD = ""
-    IS_CLOUD = False
 
 st.markdown("<h1 style='text-align: center;'>💬 DeepSeek 聊天框</h1>", unsafe_allow_html=True)
 
