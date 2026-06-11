@@ -1,14 +1,40 @@
-
-# Streamlit
+# Streamlit Secrets
 .streamlit/secrets.toml
 
-# Python
+# Python cache
 __pycache__/
 *.pyc
-*.pyo
 .venv/
-venv/
+
+# 课程文件（不部署）
+01.*.py
+02.*.py
+03.*.py
+04.*.py
+05.*.py
+06.*.py
+07.*.py
+08.*.py
+09.*.py
+10.*.py
+11.*.py
+12.*.py
+13.*.py
+14.*.py
+15.*.py
+16.*.py
+17.*.py
+18.*.py
+module*/
+data.csv
+demo.txt
+keywords.json
+tasks.josh
+tasks.json
+use_info.josh
+weather_log.txt
+todo.py
+小游戏*.py
 
 # OS
 .DS_Store
-Thumbs.db

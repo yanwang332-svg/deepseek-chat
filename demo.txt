@@ -1,4 +1,0 @@
-Hello
-世界
-追加一行
-hello, world
